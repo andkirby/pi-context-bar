@@ -5,13 +5,18 @@
  */
 
 // ---------------------------------------------------------------------------
-// ANSI helpers (256-color)
+// ANSI helpers (256-color & truecolor RGB)
 // ---------------------------------------------------------------------------
 
 export const RESET = "\x1b[0m";
 
 export const fg256 = (code: number, s: string) => `\x1b[38;5;${code}m${s}${RESET}`;
 export const bg256 = (code: number, s: string) => `\x1b[48;5;${code}m${s}${RESET}`;
+
+export const fgRgb = (r: number, g: number, b: number, s: string) =>
+	`\x1b[38;2;${r};${g};${b}m${s}${RESET}`;
+export const bgRgb = (r: number, g: number, b: number, s: string) =>
+	`\x1b[48;2;${r};${g};${b}m${s}${RESET}`;
 
 export const WHITE = 231; // pure white (#ffffff)
 export const EMPTY = "\u2800"; // braille blank (visual spacer)
@@ -86,17 +91,43 @@ export interface BarColors {
 	style(ch: string, filled: boolean): string;
 }
 
-/** Map theme-level usage to semantic tokens for the dim palette. */
-export function dimBarColors(
-	themeFg: (token: string, s: string) => string,
-	themeBg: (token: string, s: string) => string,
-): BarColors {
+/**
+ * Dim palette — dark RGB colors with real hue (not gray).
+ * Each entry: [minPct, bgR, bgG, bgB, fgR, fgG, fgB] — filled slot colors.
+ * Unfilled slots use a single dark neutral.
+ */
+export const DIM_THRESHOLDS = [
+	[70, 50, 12, 12, 140, 35, 35],  // dark red
+	[60, 45, 12, 30, 120, 30, 70],  // dark magenta
+	[50, 50, 30, 8,  130, 80, 20],  // dark amber
+	[40, 10, 35, 20,  30, 90, 50],  // dark teal
+	[30, 10, 28, 10,  30, 70, 30],  // dark green
+] as const;
+
+/** Dim unfilled slot — very dark neutral. */
+export const DIM_UNFILLED_BG: [number, number, number] = [18, 18, 22];
+export const DIM_UNFILLED_FG: [number, number, number] = [40, 40, 48];
+
+/** Build theme-aware dim color resolver using dark RGB colors. */
+export function dimBarColors(pct: number): BarColors {
+	// Pick dim threshold colors
+	let bgR = DIM_UNFILLED_BG[0], bgG = DIM_UNFILLED_BG[1], bgB = DIM_UNFILLED_BG[2];
+	let fgR = DIM_UNFILLED_FG[0], fgG = DIM_UNFILLED_FG[1], fgB = DIM_UNFILLED_FG[2];
+	for (const [min, bR, bG, bB, fR, fG, fB] of DIM_THRESHOLDS) {
+		if (pct > min) {
+			bgR = bR; bgG = bG; bgB = bB;
+			fgR = fR; fgG = fG; fgB = fB;
+			break;
+		}
+	}
+
 	return {
 		style(ch, filled) {
-			// Filled: highlighted with selectedBg. Unfilled: dim text.
-			return filled
-				? themeBg("selectedBg", themeFg("text", ch))
-				: themeFg("dim", ch);
+			if (filled) {
+				return bgRgb(bgR, bgG, bgB, fgRgb(fgR, fgG, fgB, ch));
+			}
+			return bgRgb(DIM_UNFILLED_BG[0], DIM_UNFILLED_BG[1], DIM_UNFILLED_BG[2],
+				fgRgb(DIM_UNFILLED_FG[0], DIM_UNFILLED_FG[1], DIM_UNFILLED_FG[2], ch));
 		},
 	};
 }

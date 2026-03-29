@@ -130,20 +130,35 @@ echo ""
 echo "=== Dim Palette — Theme Token Usage ==="
 echo ""
 
-# Verify dim bar output uses theme tokens
-# Filled: selectedBg (236) + text fg (231). Unfilled: dim fg (240).
+# Verify dim bar uses truecolor RGB (not 256-color or gray)
 raw=$(bun run "$TEST_TS" --bar 50 "200k" dim)
-assert_eq "dim bar at 50% → contains selectedBg (236)" "yes" \
-	"$(echo "$raw" | grep -q '48;5;236m' && echo yes || echo no)"
+assert_eq "dim bar at 50% → contains teal RGB bg" "yes" \
+	"$(echo "$raw" | grep -q '48;2;10;35;20m' && echo yes || echo no)"
 
 raw=$(bun run "$TEST_TS" --bar 5 "200k" dim)
-assert_eq "dim bar at 5% → contains dim fg (240)" "yes" \
-	"$(echo "$raw" | grep -q '38;5;240m' && echo yes || echo no)"
+# DIM_UNFILLED_BG = [18, 18, 22]
+assert_eq "dim bar at 5% → contains unfilled RGB bg" "yes" \
+	"$(echo "$raw" | grep -q '48;2;18;18;22m' && echo yes || echo no)"
 
-# Verify dim bar at 100% — all filled, no unfilled dim text
+# Verify dim bar at 100% — all filled, no unfilled bg
 raw=$(bun run "$TEST_TS" --bar 100 "200k" dim)
-assert_eq "dim bar at 100% → no dim fg (240)" "no" \
-	"$(echo "$raw" | grep -q '38;5;240m' && echo yes || echo no)"
+assert_eq "dim bar at 100% → no unfilled RGB bg" "no" \
+	"$(echo "$raw" | grep -q '48;2;18;18;22m' && echo yes || echo no)"
+
+# Verify 50% is teal-tinted (>40 bracket)
+raw=$(bun run "$TEST_TS" --bar 50 "200k" dim)
+assert_eq "dim bar at 50% → teal hue (G dominant)" "yes" \
+	"$(echo "$raw" | grep -q '48;2;10;35;20m' && echo yes || echo no)"
+
+# Verify 55% is amber-tinted (>50 bracket)
+raw=$(bun run "$TEST_TS" --bar 55 "200k" dim)
+assert_eq "dim bar at 55% → amber hue (R > G > B)" "yes" \
+	"$(echo "$raw" | grep -q '48;2;50;30;8m' && echo yes || echo no)"
+
+# Verify 70%+ is red-tinted
+raw=$(bun run "$TEST_TS" --bar 80 "200k" dim)
+assert_eq "dim bar at 80% → red hue" "yes" \
+	"$(echo "$raw" | grep -q '48;2;50;12;12m' && echo yes || echo no)"
 
 # ---------------------------------------------------------------------------
 # Section: Style switching

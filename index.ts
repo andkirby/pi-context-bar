@@ -12,7 +12,7 @@ import { truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
 import { buildBar, formatTokens, sanitizeStatusText, setBarStyle, getBarStyle, dimBarColors, vividBarColors, type BarStyle } from "./render.ts";
 
 // Re-export for tests
-export { buildBar, formatTokens, barColors, BAR_SLOTS, VIVID_THRESHOLDS, VIVID_FALLBACK, setBarStyle, getBarStyle, dimBarColors, vividBarColors } from "./render.ts";
+export { buildBar, formatTokens, barColors, BAR_SLOTS, VIVID_THRESHOLDS, VIVID_FALLBACK, DIM_THRESHOLDS, DIM_UNFILLED_BG, DIM_UNFILLED_FG, setBarStyle, getBarStyle, dimBarColors, vividBarColors, fgRgb, bgRgb } from "./render.ts";
 
 // ---------------------------------------------------------------------------
 // Extension
@@ -89,7 +89,7 @@ export default function (pi: ExtensionAPI) {
 						const ctxSizeStr = formatTokens(contextWindow);
 						const colors = getBarStyle() === "vivid"
 							? vividBarColors(contextPercent)
-							: dimBarColors(theme.fg.bind(theme), theme.bg.bind(theme));
+							: dimBarColors(contextPercent);
 						contextBar = buildBar(contextPercent, ctxSizeStr, colors) + autoIndicator;
 					} else if (totalInput > 0 && contextPercent == null) {
 						const autoIndicator = theme.fg("dim", " (auto)");
