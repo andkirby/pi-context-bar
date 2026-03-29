@@ -17,24 +17,52 @@ export const WHITE = 231; // pure white (#ffffff)
 export const EMPTY = "\u2800"; // braille blank (visual spacer)
 
 // ---------------------------------------------------------------------------
-// Color thresholds
+// Color palettes
 // ---------------------------------------------------------------------------
 
-/** [minPct, barFg, barBg, dimBg] — evaluated top-down */
-export const COLOR_THRESHOLDS = [
-	[70, 196, 196, 124],
-	[60, 160, 160, 88],
-	[50, 208, 208, 94],
-	[40, 112, 112, 28],
-	[30, 40,  40,  22],
+/** Vivid palette — high saturation, stands out against dim footer text. */
+export const VIVID_THRESHOLDS = [
+	[70, 196, 196, 124],  // red
+	[60, 160, 160, 88],   // magenta
+	[50, 208, 208, 94],   // orange
+	[40, 112, 112, 28],   // green
+	[30, 40,  40,  22],   // dark green
 ] as const;
 
-/** Return { barFg, barBg, dimBg } based on context usage %. */
+/** Dim palette — muted tones, blends naturally with dim footer text. */
+export const DIM_THRESHOLDS = [
+	[70, 124, 124, 52],   // muted red
+	[60, 96,  96,  52],   // muted magenta
+	[50, 130, 130, 58],   // muted orange
+	[40, 64,  64,  22],   // muted green
+	[30, 22,  22,  17],   // dark green
+] as const;
+
+/** Active palette — defaults to dim. Switched via /context-bar toggle. */
+let activeThresholds: typeof VIVID_THRESHOLDS = DIM_THRESHOLDS;
+
+export type BarStyle = "dim" | "vivid";
+
+/** Switch the active palette. Returns the new style. */
+export function setBarStyle(style: BarStyle): BarStyle {
+	activeThresholds = style === "vivid" ? VIVID_THRESHOLDS : DIM_THRESHOLDS;
+	return style;
+}
+
+/** Get the current active style. */
+export function getBarStyle(): BarStyle {
+	return activeThresholds === VIVID_THRESHOLDS ? "vivid" : "dim";
+}
+
+/** Return { barFg, barBg, dimBg } based on context usage % and active palette. */
 export function barColors(pct: number) {
-	for (const [min, barFg, barBg, dimBg] of COLOR_THRESHOLDS) {
+	for (const [min, barFg, barBg, dimBg] of activeThresholds) {
 		if (pct > min) return { barFg, barBg, dimBg };
 	}
-	return { barFg: 28, barBg: 28, dimBg: 22 };
+	// Fallback depends on active palette
+	return activeThresholds === VIVID_THRESHOLDS
+		? { barFg: 28, barBg: 28, dimBg: 22 }
+		: { barFg: 22, barBg: 22, dimBg: 17 };
 }
 
 // ---------------------------------------------------------------------------

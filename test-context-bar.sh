@@ -47,18 +47,19 @@ bun run "$TEST_TS" --colors | while IFS= read -r line; do
 done
 
 # ---------------------------------------------------------------------------
-# Section: buildBar slot count
+# Section: buildBar slot count (both palettes)
 # ---------------------------------------------------------------------------
 
 echo ""
 echo "=== Slot Count Consistency ==="
 echo ""
 
-for ctx_size in "200k" "1M" "1.2M" "2000k"; do
-	raw=$(bun run "$TEST_TS" --bar 50 "$ctx_size" | strip_ansi)
-	w=$(visible_width "$raw")
-	# Leading space + BAR_SLOTS (10) = 11
-	assert_eq "bar(50%, $ctx_size) → visible width = 11" "11" "$w"
+for style in dim vivid; do
+	for ctx_size in "200k" "1M" "1.2M" "2000k"; do
+		raw=$(bun run "$TEST_TS" --bar 50 "$ctx_size" | strip_ansi)
+		w=$(visible_width "$raw")
+		assert_eq "bar($style, 50%, $ctx_size) → visible width = 11" "11" "$w"
+	done
 done
 
 # ---------------------------------------------------------------------------
@@ -90,15 +91,46 @@ for c in "${cases[@]}"; do
 done
 
 # ---------------------------------------------------------------------------
-# Section: barColors thresholds
+# Section: barColors thresholds — DIM palette (default)
 # ---------------------------------------------------------------------------
 
 echo ""
-echo "=== barColors Thresholds ==="
+echo "=== barColors Thresholds (dim) ==="
 echo ""
 
 #               pct  expected_fg
 thresholds=( \
+	"5:22" \
+	"29:22" \
+	"31:22" \
+	"39:22" \
+	"41:64" \
+	"49:64" \
+	"51:130" \
+	"59:130" \
+	"61:96" \
+	"69:96" \
+	"71:124" \
+	"85:124" \
+	"100:124" \
+)
+
+for t in "${thresholds[@]}"; do
+	pct="${t%%:*}"
+	expected_fg="${t##*:}"
+	actual=$(bun run "$TEST_TS" --color "$pct" dim)
+	assert_eq "dim.barColors($pct%%).barFg" "$expected_fg" "$actual"
+done
+
+# ---------------------------------------------------------------------------
+# Section: barColors thresholds — VIVID palette
+# ---------------------------------------------------------------------------
+
+echo ""
+echo "=== barColors Thresholds (vivid) ==="
+echo ""
+
+thresholds_vivid=( \
 	"5:28" \
 	"29:28" \
 	"31:40" \
@@ -114,12 +146,24 @@ thresholds=( \
 	"100:196" \
 )
 
-for t in "${thresholds[@]}"; do
+for t in "${thresholds_vivid[@]}"; do
 	pct="${t%%:*}"
 	expected_fg="${t##*:}"
-	actual=$(bun run "$TEST_TS" --color "$pct")
-	assert_eq "barColors($pct%%).barFg" "$expected_fg" "$actual"
+	actual=$(bun run "$TEST_TS" --color "$pct" vivid)
+	assert_eq "vivid.barColors($pct%%).barFg" "$expected_fg" "$actual"
 done
+
+# ---------------------------------------------------------------------------
+# Section: Style switching
+# ---------------------------------------------------------------------------
+
+echo ""
+echo "=== Style Switching ==="
+echo ""
+
+assert_eq "default style → dim" "dim" "$(bun run "$TEST_TS" --style)"
+assert_eq "get vivid inline" "vivid" "$(bun run "$TEST_TS" --style vivid)"
+assert_eq "get dim inline" "dim" "$(bun run "$TEST_TS" --style dim)"
 
 # ---------------------------------------------------------------------------
 # Section: Edge cases
@@ -137,7 +181,7 @@ assert_eq "bar(0%, 200k) → starts with ' 0%'" " 0%" "$(printf '%s' "$raw" | cu
 raw=$(bun run "$TEST_TS" --bar 100 "200k" | strip_ansi)
 assert_eq "bar(100%, 200k) → ends with '00k'" "00k" "$(printf '%s' "$raw" | rev | cut -c1-3 | rev)"
 
-# 3-digit percentage — still 10 slots + leading space = 11
+# BAR_SLOTS is fixed — 3-digit pct still 11 chars
 w=$(visible_width "$(bun run "$TEST_TS" --bar 100 "200k")")
 assert_eq "bar(100%, 200k) → visible width = 11 (BAR_SLOTS is fixed)" "11" "$w"
 

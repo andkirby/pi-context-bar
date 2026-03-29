@@ -9,19 +9,31 @@
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
-import { buildBar, formatTokens, sanitizeStatusText } from "./render.ts";
+import { buildBar, formatTokens, sanitizeStatusText, setBarStyle, getBarStyle, type BarStyle } from "./render.ts";
 
-// Re-export sanitizeStatusText — keep render.ts as the single source for pure logic
-export { buildBar, formatTokens, barColors, BAR_SLOTS, COLOR_THRESHOLDS } from "./render.ts";
+// Re-export for tests
+export { buildBar, formatTokens, barColors, BAR_SLOTS, VIVID_THRESHOLDS, DIM_THRESHOLDS, setBarStyle, getBarStyle } from "./render.ts";
 
 // ---------------------------------------------------------------------------
 // Extension
 // ---------------------------------------------------------------------------
 
+const STATE_TYPE = "context-bar:style";
+
 export default function (pi: ExtensionAPI) {
 	pi.on("session_start", async (_event, ctx) => {
 		// Resolve once — env vars don't change at runtime
 		const home = globalThis.process?.env?.HOME || globalThis.process?.env?.USERPROFILE || "";
+
+		// Restore bar style from session entries (most recent wins)
+		for (let i = ctx.sessionManager.getEntries().length - 1; i >= 0; i--) {
+			const entry = ctx.sessionManager.getEntries()[i];
+			if (entry.type === "custom" && entry.customType === STATE_TYPE) {
+				const style = (entry.data as { style?: BarStyle }).style;
+				if (style) setBarStyle(style);
+				break;
+			}
+		}
 
 		ctx.ui.setFooter((tui, theme, footerData) => {
 			const unsub = footerData.onBranchChange(() => tui.requestRender());
@@ -131,5 +143,28 @@ export default function (pi: ExtensionAPI) {
 				},
 			};
 		});
+	});
+
+	// /context-bar toggle|dim|vivid — switch bar color palette
+	pi.registerCommand("context-bar", {
+		description: "Toggle context bar style: dim (default) or vivid",
+		handler: async (args, ctx) => {
+			const action = args.trim().toLowerCase() || "toggle";
+			const current = getBarStyle();
+
+			let next: BarStyle;
+			if (action === "dim" || action === "vivid") {
+				next = action;
+			} else if (action === "toggle") {
+				next = current === "dim" ? "vivid" : "dim";
+			} else {
+				ctx.ui.notify(`Unknown action: "${action}". Use: toggle, dim, vivid`, "error");
+				return;
+			}
+
+			setBarStyle(next);
+			pi.appendEntry(STATE_TYPE, { style: next });
+			ctx.ui.notify(`Context bar style: ${next}`, "info");
+		},
 	});
 }
