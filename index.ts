@@ -9,10 +9,10 @@
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
-import { buildBar, formatTokens, sanitizeStatusText, setBarStyle, getBarStyle, type BarStyle } from "./render.ts";
+import { buildBar, formatTokens, sanitizeStatusText, setBarStyle, getBarStyle, dimBarColors, vividBarColors, type BarStyle } from "./render.ts";
 
 // Re-export for tests
-export { buildBar, formatTokens, barColors, BAR_SLOTS, VIVID_THRESHOLDS, DIM_THRESHOLDS, setBarStyle, getBarStyle } from "./render.ts";
+export { buildBar, formatTokens, barColors, BAR_SLOTS, VIVID_THRESHOLDS, VIVID_FALLBACK, setBarStyle, getBarStyle, dimBarColors, vividBarColors } from "./render.ts";
 
 // ---------------------------------------------------------------------------
 // Extension
@@ -87,7 +87,10 @@ export default function (pi: ExtensionAPI) {
 					if (totalInput > 0 && contextPercent != null) {
 						const autoIndicator = theme.fg("dim", " (auto)");
 						const ctxSizeStr = formatTokens(contextWindow);
-						contextBar = buildBar(contextPercent, ctxSizeStr) + autoIndicator;
+						const colors = getBarStyle() === "vivid"
+							? vividBarColors(contextPercent)
+							: dimBarColors(theme.fg.bind(theme), theme.bg.bind(theme));
+						contextBar = buildBar(contextPercent, ctxSizeStr, colors) + autoIndicator;
 					} else if (totalInput > 0 && contextPercent == null) {
 						const autoIndicator = theme.fg("dim", " (auto)");
 						contextBar = theme.fg("dim", `?/${formatTokens(contextWindow)}${autoIndicator}`);

@@ -2,21 +2,47 @@
  * test-render.ts — Test harness for context-bar pure rendering functions.
  *
  * Invoked by test-context-bar.sh with subcommands:
- *   --colors              Visual preview of all color thresholds
- *   --bar <pct> <ctxSize> Raw buildBar output (for width assertions)
+ *   --colors              Visual preview of all styles
+ *   --bar <pct> <ctxSize> [dim|vivid]  Raw buildBar output (for width assertions)
  *   --fmt <n>             formatTokens result
- *   --color <pct>         barColors(pct).barFg (for threshold assertions)
- *   --style               Current active style
- *   --set-style <style>   Switch palette (dim|vivid)
+ *   --color <pct>         barColors(pct).barFg (vivid threshold assertions)
+ *   --style [dim|vivid]   Get (optionally set) current style
  */
 
-import { buildBar, barColors, formatTokens, setBarStyle, getBarStyle } from "./render.ts";
+import {
+	buildBar, barColors, formatTokens,
+	setBarStyle, getBarStyle,
+	fg256, bg256,
+	vividBarColors,
+	type BarColors,
+} from "./render.ts";
 
 const args = process.argv.slice(2);
 
 function usage() {
-	console.error("Usage: test-render.ts [--colors | --bar <pct> <ctxSize> | --fmt <n> | --color <pct> | --style | --set-style <dim|vivid>]");
+	console.error("Usage: test-render.ts [--colors | --bar <pct> <ctxSize> [dim|vivid] | --fmt <n> | --color <pct> | --style [dim|vivid]]");
 	process.exit(1);
+}
+
+/** Minimal theme.fg/bg mock for testing dim palette (uses 256-color indices). */
+const TEST_DIM_FG = (token: string, s: string) => {
+	const map: Record<string, number> = { text: 231, dim: 240, muted: 244 };
+	return fg256(map[token] ?? 0, s);
+};
+const TEST_DIM_BG = (token: string, s: string) => {
+	const map: Record<string, number> = { dim: 236, muted: 239 };
+	return bg256(map[token] ?? 0, s);
+};
+
+/** Get a BarColors resolver for the given style. */
+function getColors(style: string, pct: number): BarColors {
+	return style === "vivid"
+		? vividBarColors(pct)
+		: {
+				style(ch: string, filled: boolean) {
+					return TEST_DIM_BG(filled ? "muted" : "dim", TEST_DIM_FG("text", ch));
+				},
+		  };
 }
 
 switch (args[0]) {
@@ -44,17 +70,17 @@ switch (args[0]) {
 		};
 
 		for (const style of ["dim", "vivid"] as const) {
-			setBarStyle(style);
 			console.log(`--- ${style.toUpperCase()} ---`);
 			for (const [pct, ctx] of cases) {
-				const bar = buildBar(pct, ctx);
+				const colors = getColors(style, pct);
+				const bar = buildBar(pct, ctx, colors);
 				console.log(`[${pct}% - ${labels[pct]}]`);
 				console.log(`→${bar}`);
 			}
-			// Different context window sizes
 			console.log("");
 			for (const [pct, ctx] of [[50, "1M"], [50, "1.2M"], [50, "2M"]] as [number, string][]) {
-				const bar = buildBar(pct, ctx);
+				const colors = getColors(style, pct);
+				const bar = buildBar(pct, ctx, colors);
 				console.log(`[${pct}% - ${ctx} context]`);
 				console.log(`→${bar}`);
 			}
@@ -66,8 +92,10 @@ switch (args[0]) {
 	case "--bar": {
 		const pct = Number(args[1]);
 		const ctxSize = args[2];
+		const style = args[3] || "dim";
 		if (isNaN(pct) || !ctxSize) usage();
-		process.stdout.write(buildBar(pct, ctxSize));
+		const colors = getColors(style, pct);
+		process.stdout.write(buildBar(pct, ctxSize, colors));
 		break;
 	}
 
@@ -78,11 +106,9 @@ switch (args[0]) {
 		break;
 	}
 
-case "--color": {
+	case "--color": {
 		const pct = Number(args[1]);
-		const style = args[2]; // optional: "dim" or "vivid"
 		if (isNaN(pct)) usage();
-		if (style) setBarStyle(style);
 		console.log(barColors(pct).barFg);
 		break;
 	}
@@ -91,13 +117,6 @@ case "--color": {
 		const style = args[1]; // optional: set before reading
 		if (style) setBarStyle(style);
 		console.log(getBarStyle());
-		break;
-	}
-
-	case "--set-style": {
-		const style = args[1];
-		if (style !== "dim" && style !== "vivid") usage();
-		setBarStyle(style);
 		break;
 	}
 

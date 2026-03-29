@@ -56,7 +56,7 @@ echo ""
 
 for style in dim vivid; do
 	for ctx_size in "200k" "1M" "1.2M" "2000k"; do
-		raw=$(bun run "$TEST_TS" --bar 50 "$ctx_size" | strip_ansi)
+		raw=$(bun run "$TEST_TS" --bar 50 "$ctx_size" "$style" | strip_ansi)
 		w=$(visible_width "$raw")
 		assert_eq "bar($style, 50%, $ctx_size) → visible width = 11" "11" "$w"
 	done
@@ -91,45 +91,14 @@ for c in "${cases[@]}"; do
 done
 
 # ---------------------------------------------------------------------------
-# Section: barColors thresholds — DIM palette (default)
-# ---------------------------------------------------------------------------
-
-echo ""
-echo "=== barColors Thresholds (dim) ==="
-echo ""
-
-#               pct  expected_fg
-thresholds=( \
-	"5:22" \
-	"29:22" \
-	"31:22" \
-	"39:22" \
-	"41:64" \
-	"49:64" \
-	"51:130" \
-	"59:130" \
-	"61:96" \
-	"69:96" \
-	"71:124" \
-	"85:124" \
-	"100:124" \
-)
-
-for t in "${thresholds[@]}"; do
-	pct="${t%%:*}"
-	expected_fg="${t##*:}"
-	actual=$(bun run "$TEST_TS" --color "$pct" dim)
-	assert_eq "dim.barColors($pct%%).barFg" "$expected_fg" "$actual"
-done
-
-# ---------------------------------------------------------------------------
-# Section: barColors thresholds — VIVID palette
+# Section: barColors thresholds — VIVID palette (raw 256-color)
 # ---------------------------------------------------------------------------
 
 echo ""
 echo "=== barColors Thresholds (vivid) ==="
 echo ""
 
+#               pct  expected_fg
 thresholds_vivid=( \
 	"5:28" \
 	"29:28" \
@@ -149,9 +118,32 @@ thresholds_vivid=( \
 for t in "${thresholds_vivid[@]}"; do
 	pct="${t%%:*}"
 	expected_fg="${t##*:}"
-	actual=$(bun run "$TEST_TS" --color "$pct" vivid)
+	actual=$(bun run "$TEST_TS" --color "$pct")
 	assert_eq "vivid.barColors($pct%%).barFg" "$expected_fg" "$actual"
 done
+
+# ---------------------------------------------------------------------------
+# Section: Dim palette uses theme tokens (structural check)
+# ---------------------------------------------------------------------------
+
+echo ""
+echo "=== Dim Palette — Theme Token Usage ==="
+echo ""
+
+# Verify dim bar output contains the theme token's mock color codes
+# TEST_DIM_FG uses 231 (text), TEST_DIM_BG uses 236 (dim) / 239 (muted)
+raw=$(bun run "$TEST_TS" --bar 50 "200k" dim)
+assert_eq "dim bar at 50% → contains muted bg (239)" "yes" \
+	"$(echo "$raw" | grep -q '48;5;239m' && echo yes || echo no)"
+
+raw=$(bun run "$TEST_TS" --bar 5 "200k" dim)
+assert_eq "dim bar at 5% → contains dim bg (236)" "yes" \
+	"$(echo "$raw" | grep -q '48;5;236m' && echo yes || echo no)"
+
+# Verify dim bar at 100% — all filled, all muted
+raw=$(bun run "$TEST_TS" --bar 100 "200k" dim)
+assert_eq "dim bar at 100% → no dim bg (236)" "no" \
+	"$(echo "$raw" | grep -q '48;5;236m' && echo yes || echo no)"
 
 # ---------------------------------------------------------------------------
 # Section: Style switching
@@ -173,17 +165,17 @@ echo ""
 echo "=== Edge Cases ==="
 echo ""
 
-# 0% — everything dim, no fill
-raw=$(bun run "$TEST_TS" --bar 0 "200k" | strip_ansi)
-assert_eq "bar(0%, 200k) → starts with ' 0%'" " 0%" "$(printf '%s' "$raw" | cut -c1-3)"
+# 0% — everything unfilled
+raw=$(bun run "$TEST_TS" --bar 0 "200k" vivid | strip_ansi)
+assert_eq "bar(0%, 200k, vivid) → starts with ' 0%'" " 0%" "$(printf '%s' "$raw" | cut -c1-3)"
 
 # 100% — everything filled
-raw=$(bun run "$TEST_TS" --bar 100 "200k" | strip_ansi)
-assert_eq "bar(100%, 200k) → ends with '00k'" "00k" "$(printf '%s' "$raw" | rev | cut -c1-3 | rev)"
+raw=$(bun run "$TEST_TS" --bar 100 "200k" vivid | strip_ansi)
+assert_eq "bar(100%, 200k, vivid) → ends with '00k'" "00k" "$(printf '%s' "$raw" | rev | cut -c1-3 | rev)"
 
 # BAR_SLOTS is fixed — 3-digit pct still 11 chars
-w=$(visible_width "$(bun run "$TEST_TS" --bar 100 "200k")")
-assert_eq "bar(100%, 200k) → visible width = 11 (BAR_SLOTS is fixed)" "11" "$w"
+w=$(visible_width "$(bun run "$TEST_TS" --bar 100 "200k" vivid)")
+assert_eq "bar(100%, 200k, vivid) → visible width = 11" "11" "$w"
 
 # ---------------------------------------------------------------------------
 # Summary
