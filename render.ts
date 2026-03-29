@@ -96,16 +96,16 @@ export interface BarColors {
  * Unfilled slots use a single dark neutral.
  */
 export const DIM_THRESHOLDS = [
-	[70, 60, 15, 15, 160, 45, 45],  // dark red
-	[60, 55, 15, 35, 140, 40, 80],  // dark magenta
-	[50, 60, 38, 10, 150, 95, 25],  // dark amber
-	[40, 12, 45, 25,  35, 105, 60], // dark teal
-	[30, 15, 45, 15,  45, 110, 45], // dark green
+	[70, 80,  20, 20, 180,  55, 55],  // dark red
+	[60, 70,  20, 42, 160,  50, 95],  // dark magenta
+	[50, 75,  48, 12, 170, 115, 30],  // dark amber
+	[40, 18,  58, 32,  50, 130, 75],  // dark teal
+	[0,  20,  58, 20,  55, 135, 55],  // dark green (catches everything)
 ] as const;
 
-/** Dim unfilled slot — very dark neutral. */
-export const DIM_UNFILLED_BG: [number, number, number] = [14, 14, 18];
-export const DIM_UNFILLED_FG: [number, number, number] = [55, 55, 65];
+/** Dim unfilled slot — dark neutral but readable. */
+export const DIM_UNFILLED_BG: [number, number, number] = [16, 16, 20];
+export const DIM_UNFILLED_FG: [number, number, number] = [85, 85, 100];
 
 /** Build theme-aware dim color resolver using dark RGB colors. */
 export function dimBarColors(pct: number): BarColors {
