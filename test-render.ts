@@ -24,10 +24,14 @@ function usage() {
 	process.exit(1);
 }
 
-/** Minimal theme.fg mock for testing dim palette (uses 256-color indices). */
+/** Minimal theme mock for testing dim palette (uses 256-color indices). */
 const TEST_DIM_FG = (token: string, s: string) => {
-	const map: Record<string, number> = { text: 231, dim: 240, muted: 244 };
+	const map: Record<string, number> = { text: 231, dim: 240 };
 	return fg256(map[token] ?? 0, s);
+};
+const TEST_DIM_BG = (token: string, s: string) => {
+	const map: Record<string, number> = { selectedBg: 236 };
+	return bg256(map[token] ?? 0, s);
 };
 
 /** Get a BarColors resolver for the given style. */
@@ -36,7 +40,9 @@ function getColors(style: string, pct: number): BarColors {
 		? vividBarColors(pct)
 		: {
 				style(ch: string, filled: boolean) {
-					return TEST_DIM_FG(filled ? "muted" : "dim", ch);
+					return filled
+						? TEST_DIM_BG("selectedBg", TEST_DIM_FG("text", ch))
+						: TEST_DIM_FG("dim", ch);
 				},
 		  };
 }

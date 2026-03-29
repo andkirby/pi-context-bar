@@ -130,17 +130,17 @@ echo ""
 echo "=== Dim Palette — Theme Token Usage ==="
 echo ""
 
-# Verify dim bar output contains the theme token's mock fg color codes
-# TEST_DIM_FG uses 231 (text), 240 (dim), 244 (muted)
+# Verify dim bar output uses theme tokens
+# Filled: selectedBg (236) + text fg (231). Unfilled: dim fg (240).
 raw=$(bun run "$TEST_TS" --bar 50 "200k" dim)
-assert_eq "dim bar at 50% → contains muted fg (244)" "yes" \
-	"$(echo "$raw" | grep -q '38;5;244m' && echo yes || echo no)"
+assert_eq "dim bar at 50% → contains selectedBg (236)" "yes" \
+	"$(echo "$raw" | grep -q '48;5;236m' && echo yes || echo no)"
 
 raw=$(bun run "$TEST_TS" --bar 5 "200k" dim)
 assert_eq "dim bar at 5% → contains dim fg (240)" "yes" \
 	"$(echo "$raw" | grep -q '38;5;240m' && echo yes || echo no)"
 
-# Verify dim bar at 100% — all filled, all muted
+# Verify dim bar at 100% — all filled, no unfilled dim text
 raw=$(bun run "$TEST_TS" --bar 100 "200k" dim)
 assert_eq "dim bar at 100% → no dim fg (240)" "no" \
 	"$(echo "$raw" | grep -q '38;5;240m' && echo yes || echo no)"

@@ -89,10 +89,14 @@ export interface BarColors {
 /** Map theme-level usage to semantic tokens for the dim palette. */
 export function dimBarColors(
 	themeFg: (token: string, s: string) => string,
+	themeBg: (token: string, s: string) => string,
 ): BarColors {
 	return {
 		style(ch, filled) {
-			return themeFg(filled ? "muted" : "dim", ch);
+			// Filled: highlighted with selectedBg. Unfilled: dim text.
+			return filled
+				? themeBg("selectedBg", themeFg("text", ch))
+				: themeFg("dim", ch);
 		},
 	};
 }
