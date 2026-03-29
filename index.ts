@@ -89,7 +89,7 @@ export default function (pi: ExtensionAPI) {
 						const ctxSizeStr = formatTokens(contextWindow);
 						const colors = getBarStyle() === "vivid"
 							? vividBarColors(contextPercent)
-							: dimBarColors(theme.fg.bind(theme), theme.bg.bind(theme));
+							: dimBarColors(theme.fg.bind(theme));
 						contextBar = buildBar(contextPercent, ctxSizeStr, colors) + autoIndicator;
 					} else if (totalInput > 0 && contextPercent == null) {
 						const autoIndicator = theme.fg("dim", " (auto)");

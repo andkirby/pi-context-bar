@@ -89,11 +89,10 @@ export interface BarColors {
 /** Map theme-level usage to semantic tokens for the dim palette. */
 export function dimBarColors(
 	themeFg: (token: string, s: string) => string,
-	themeBg: (token: string, s: string) => string,
 ): BarColors {
 	return {
 		style(ch, filled) {
-			return themeBg(filled ? "muted" : "dim", themeFg("text", ch));
+			return themeFg(filled ? "muted" : "dim", ch);
 		},
 	};
 }
