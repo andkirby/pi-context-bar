@@ -165,7 +165,9 @@ export function vividBarColors(pct: number): BarColors {
  * @param colors   Theme-aware color resolver
  */
 export function buildBar(pct: number, ctxSize: string, colors: BarColors): string {
-	const pctStr = `${pct}%`;
+	const clamped = Math.max(0, Math.min(100, Math.round(pct)));
+	const pctStr = `${clamped}%`;
+	pct = clamped;
 	const pctLen = pctStr.length;   // e.g. 2-3
 	const ctxLen = ctxSize.length;  // e.g. 4
 	const barStart = pctLen;

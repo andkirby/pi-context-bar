@@ -11,8 +11,9 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
 import { buildBar, formatTokens, sanitizeStatusText, setBarStyle, getBarStyle, dimBarColors, vividBarColors, type BarStyle } from "./render.ts";
 
-// Re-export for tests
-export { buildBar, formatTokens, barColors, BAR_SLOTS, VIVID_THRESHOLDS, VIVID_FALLBACK, DIM_THRESHOLDS, DIM_UNFILLED_BG, DIM_UNFILLED_FG, setBarStyle, getBarStyle, dimBarColors, vividBarColors, fgRgb, bgRgb } from "./render.ts";
+// Public API (tests import render.ts directly)
+export type { BarStyle } from "./render.ts";
+export { buildBar, formatTokens, setBarStyle, getBarStyle } from "./render.ts";
 
 // ---------------------------------------------------------------------------
 // Extension
@@ -26,14 +27,42 @@ export default function (pi: ExtensionAPI) {
 		const home = globalThis.process?.env?.HOME || globalThis.process?.env?.USERPROFILE || "";
 
 		// Restore bar style from session entries (most recent wins)
-		for (let i = ctx.sessionManager.getEntries().length - 1; i >= 0; i--) {
-			const entry = ctx.sessionManager.getEntries()[i];
+		const entries = ctx.sessionManager.getEntries();
+		for (let i = entries.length - 1; i >= 0; i--) {
+			const entry = entries[i];
 			if (entry.type === "custom" && entry.customType === STATE_TYPE) {
 				const style = (entry.data as { style?: BarStyle }).style;
 				if (style) setBarStyle(style);
 				break;
 			}
 		}
+
+		// Incremental token counters — avoid O(n) recomputation on every render
+		let totalInput = 0;
+		let totalOutput = 0;
+		let totalCacheRead = 0;
+		let totalCost = 0;
+		let processedCount = 0;
+
+		function accumulateEntries() {
+			const latest = ctx.sessionManager.getEntries();
+			for (let i = processedCount; i < latest.length; i++) {
+				const entry = latest[i];
+				if (entry.type === "message" && entry.message.role === "assistant") {
+					const u = entry.message.usage;
+					if (u) {
+						totalInput += u.input;
+						totalOutput += u.output;
+						totalCacheRead += u.cacheRead;
+						totalCost += u.cost.total;
+					}
+				}
+			}
+			processedCount = latest.length;
+		}
+
+		// Warm cache with existing entries
+		accumulateEntries();
 
 		ctx.ui.setFooter((tui, theme, footerData) => {
 			const unsub = footerData.onBranchChange(() => tui.requestRender());
@@ -43,23 +72,8 @@ export default function (pi: ExtensionAPI) {
 				invalidate() {},
 
 				render(width: number): string[] {
-					const state = ctx.sessionManager.getEntries();
-
-					// Token stats
-					let totalInput = 0;
-					let totalOutput = 0;
-					let totalCacheRead = 0;
-					let totalCost = 0;
-					for (const entry of state) {
-						if (entry.type === "message" && entry.message.role === "assistant") {
-							const u = entry.message.usage;
-							if (!u) continue;
-							totalInput += u.input;
-							totalOutput += u.output;
-							totalCacheRead += u.cacheRead;
-							totalCost += u.cost.total;
-						}
-					}
+					// Process only new entries since last render
+					accumulateEntries();
 
 					// Context usage (mirrors FooterComponent logic)
 					const contextUsage = ctx.getContextUsage?.() ?? null;
@@ -115,7 +129,7 @@ export default function (pi: ExtensionAPI) {
 						// Truncate model name to fit
 						const avail = width - statsLeftWidth - contextBarWidth - minPad;
 						if (avail > 0) {
-							const tr = truncateToWidth(dimRightSide, avail, "");
+							const tr = truncateToWidth(dimRightSide, avail, theme.fg("dim", "…"));
 							const trW = visibleWidth(tr);
 							statsLine = dimStatsLeft + contextBar + " ".repeat(Math.max(0, width - statsLeftWidth - contextBarWidth - trW)) + tr;
 						} else {
