@@ -136,9 +136,12 @@ assert_eq "dim bar at 50% → contains teal RGB bg" "yes" \
 	"$(echo "$raw" | grep -q '48;2;12;45;25m' && echo yes || echo no)"
 
 raw=$(bun run "$TEST_TS" --bar 5 "200k" dim)
-# DIM_UNFILLED_BG = [14, 14, 18]
+# DIM_UNFILLED_BG = [14, 14, 18], DIM_UNFILLED_FG = [55, 55, 65]
 assert_eq "dim bar at 5% → contains unfilled RGB bg" "yes" \
 	"$(echo "$raw" | grep -q '48;2;14;14;18m' && echo yes || echo no)"
+
+assert_eq "dim bar at 5% → contains unfilled RGB fg" "yes" \
+	"$(echo "$raw" | grep -q '38;2;55;55;65m' && echo yes || echo no)"
 
 # Verify dim bar at 100% — all filled, no unfilled bg
 raw=$(bun run "$TEST_TS" --bar 100 "200k" dim)
@@ -159,6 +162,15 @@ assert_eq "dim bar at 55% → amber hue (R > G > B)" "yes" \
 raw=$(bun run "$TEST_TS" --bar 80 "200k" dim)
 assert_eq "dim bar at 80% → red hue" "yes" \
 	"$(echo "$raw" | grep -q '48;2;60;15;15m' && echo yes || echo no)"
+
+# Verify vivid text is always white (fg 231)
+raw=$(bun run "$TEST_TS" --bar 50 "200k" vivid)
+assert_eq "vivid bar at 50% → text uses white fg (231)" "yes" \
+	"$(echo "$raw" | grep -q '38;5;231m' && echo yes || echo no)"
+
+raw=$(bun run "$TEST_TS" --bar 80 "200k" vivid)
+assert_eq "vivid bar at 80% → text uses white fg (231)" "yes" \
+	"$(echo "$raw" | grep -q '38;5;231m' && echo yes || echo no)"
 
 # ---------------------------------------------------------------------------
 # Section: Style switching

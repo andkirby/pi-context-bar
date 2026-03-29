@@ -83,12 +83,11 @@ export const BAR_SLOTS = 10;
 
 /**
  * Color resolver — abstracts themed vs raw color application.
- * For "dim": uses theme.fg/theme.bg with named tokens.
- * For "vivid": uses raw 256-color ANSI codes.
+ * `isText` distinguishes percentage/context-size text from braille fill.
  */
 export interface BarColors {
-	/** Apply both fg and bg to a character. Returns the styled string. */
-	style(ch: string, filled: boolean): string;
+	/** Apply colors to a character. */
+	style(ch: string, filled: boolean, isText: boolean): string;
 }
 
 /**
@@ -101,12 +100,12 @@ export const DIM_THRESHOLDS = [
 	[60, 55, 15, 35, 140, 40, 80],  // dark magenta
 	[50, 60, 38, 10, 150, 95, 25],  // dark amber
 	[40, 12, 45, 25,  35, 105, 60], // dark teal
-	[30, 12, 40, 12,  35, 95, 35],  // dark green
+	[30, 15, 45, 15,  45, 110, 45], // dark green
 ] as const;
 
 /** Dim unfilled slot — very dark neutral. */
 export const DIM_UNFILLED_BG: [number, number, number] = [14, 14, 18];
-export const DIM_UNFILLED_FG: [number, number, number] = [35, 35, 42];
+export const DIM_UNFILLED_FG: [number, number, number] = [55, 55, 65];
 
 /** Build theme-aware dim color resolver using dark RGB colors. */
 export function dimBarColors(pct: number): BarColors {
@@ -122,7 +121,7 @@ export function dimBarColors(pct: number): BarColors {
 	}
 
 	return {
-		style(ch, filled) {
+		style(ch, filled, _isText) {
 			if (filled) {
 				return bgRgb(bgR, bgG, bgB, fgRgb(fgR, fgG, fgB, ch));
 			}
@@ -145,10 +144,10 @@ export function vividBarColors(pct: number): BarColors {
 		dimBg = VIVID_FALLBACK.dimBg;
 	}
 
-	const filledSlots = Math.min(Math.floor(pct / 10), BAR_SLOTS);
 	return {
-		style(ch, filled) {
-			const fg = filled ? barFg! : WHITE;
+		style(ch, filled, isText) {
+			// Text chars (percentage + context size) always white
+			const fg = isText ? WHITE : (filled ? barFg! : WHITE);
 			const bg = filled ? barBg! : dimBg!;
 			return fg256(fg, bg256(bg, ch));
 		},
@@ -177,17 +176,17 @@ export function buildBar(pct: number, ctxSize: string, colors: BarColors): strin
 
 	// Left: percentage text
 	for (let i = 0; i < pctLen; i++) {
-		bar += colors.style(pctStr[i]!, i < filledSlots);
+		bar += colors.style(pctStr[i]!, i < filledSlots, true);
 	}
 
 	// Middle: braille fill
 	for (let i = barStart; i < barEnd; i++) {
-		bar += colors.style(EMPTY, i < filledSlots);
+		bar += colors.style(EMPTY, i < filledSlots, false);
 	}
 
 	// Right: context size
 	for (let i = barEnd; i < BAR_SLOTS; i++) {
-		bar += colors.style(ctxSize[i - barEnd]!, i < filledSlots);
+		bar += colors.style(ctxSize[i - barEnd]!, i < filledSlots, true);
 	}
 
 	return " " + bar;
