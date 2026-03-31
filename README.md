@@ -2,6 +2,11 @@
 
 Replaces pi's default footer with an enhanced version that renders context window usage as a visual bar.
 
+## Alternative for Claude Code
+> Full statusline with same the colored context bar.
+
+https://github.com/andkirby/claude-statusline/
+
 ## Footer Layout
 
 ```
