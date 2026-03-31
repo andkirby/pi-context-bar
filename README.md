@@ -12,6 +12,18 @@ Replaces pi's default footer with an enhanced version that renders context windo
 **Line 1** — Working directory and git branch (dimmed).
 **Line 2** — Session stats + context bar + model name.
 
+
+### Vesual Example:
+<img width="313" height="28" alt="image" src="https://github.com/user-attachments/assets/75ea6db5-19e5-4e46-8664-39dabf606733" />
+
+### Tests
+
+<img width="155" height="407" alt="image" src="https://github.com/user-attachments/assets/5c512864-16eb-4ae1-82fd-ce661884118e" />
+ <img width="166" height="407" alt="image" src="https://github.com/user-attachments/assets/75b2a99c-db8a-4118-bfe9-8dba907071ad" />
+
+
+
+
 ### Stats
 
 | Symbol | Meaning |
