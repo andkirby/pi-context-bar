@@ -100,14 +100,8 @@ Tests cover:
 
 Add to your pi extensions config:
 
-```json
-{
-  "extensions": {
-    "context-bar": {
-      "path": "~/.pi/agent/extensions/context-bar"
-    }
-  }
-}
+```shell
+$ pi install https://github.com/andkirby/pi-context-bar
 ```
 
 Set-and-forget — activates automatically on session start.
